@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const { default: slugify } = require('slugify');
+
+const {marked} = require('marked');
+const createDomPurify = require('dompurify');
+const { JSDOM } = require('jsdom');
+const dompurify = createDomPurify(new JSDOM().window)
+
+
 
 const Schema = mongoose.Schema;
 
@@ -12,23 +20,35 @@ const BlogSchema = new Schema({
     type: String,
     required: true
   },
-  content: {
+  description: {
     type: String,
-    required: true
+  },
+  markdown: {
+    type: String,
+    required: true,
   },
   created_at: {
     type: Date,
     default: Date.now
   },
+  slug: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   tags: {
     type: [String]
+  },
+  sanatizedHtml: {
+    type: String,
+    required: true
   },
   comments: [{
     author: {
       type: String,
       required: true
     },
-    content: {
+    description: {
       type: String,
       required: true
     },
@@ -37,6 +57,20 @@ const BlogSchema = new Schema({
       default: Date.now
     }
   }]
+});
+
+
+BlogSchema.pre('validate', function (next) {
+  if (this.title) {
+
+    this.slug = slugify(this.title, { lower: true, strict: true })
+  }
+  if (this.markdown) {
+    this.sanatizedHtml = dompurify.sanitize(marked.parse(this.markdown));
+  }
+
+  next();
+
 });
 
 // Create a model for the schema
