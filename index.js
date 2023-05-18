@@ -1,28 +1,33 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const passport = require('passport');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
-require('dotenv').config()
-const methodOverride = require('method-override');
-const blogsRouter = require('./routes/blogsRoute');
 
+const articles = require('./routes/articles');
+const auth = require('./routes/auth')
 
 const app = express();
+const port = process.env.PORT || 5000;
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-app.use(express.json()); // for parsing application/json
-app.use(express.urlencoded({ extended: true }));
+
+const db = process.env.MONGO_URL
+
+mongoose
+  .connect(db, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
 
-app.use(blogsRouter);
-app.use(methodOverride('_method'))
+app.use(passport.initialize());
+require('./config/passport')(passport);
 
-const uri = process.env.MONGO_URL
+app.use('./api/auth', auth);
+app.use('/api/articles', articles);
 
-mongoose.connect(uri, {
-  useNewUrlParser: true, useUnifiedTopology: true,
-})
-  .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error(err));
 
-const PORT = 3000;
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => console.log(`Server running on port ${port}`));
